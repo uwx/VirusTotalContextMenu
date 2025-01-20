@@ -9,13 +9,13 @@ namespace VirusTotalContextMenu;
 /// <summary>
 /// Register and unregister simple shell context menus.
 /// </summary>
-static class FileShellExtension
+internal static class FileShellExtension
 {
     public static bool IsRegistered(string fileType, string shellKeyName)
     {
-        string regPath = $@"Software\Classes\{fileType}\shell\{shellKeyName}";
+        var regPath = $@"Software\Classes\{fileType}\shell\{shellKeyName}";
 
-        using RegistryKey? key = Registry.CurrentUser.OpenSubKey(regPath);
+        using var key = Registry.CurrentUser.OpenSubKey(regPath);
         return key != null;
     }
 
@@ -31,17 +31,17 @@ static class FileShellExtension
         Debug.Assert(!string.IsNullOrEmpty(fileType) && !string.IsNullOrEmpty(shellKeyName) && !string.IsNullOrEmpty(menuText) && !string.IsNullOrEmpty(menuCommand));
 
         // create full path to registry location
-        string regPath = $@"Software\Classes\{fileType}\shell\{shellKeyName}";
+        var regPath = $@"Software\Classes\{fileType}\shell\{shellKeyName}";
 
         // add context menu to the registry
-        using (RegistryKey key = Registry.CurrentUser.CreateSubKey(regPath))
+        using (var key = Registry.CurrentUser.CreateSubKey(regPath))
         {
             key.SetValue(null, menuText);
             key.SetValue("Icon", iconPath);
         }
 
         // add command that is invoked to the registry
-        using (RegistryKey key = Registry.CurrentUser.CreateSubKey($@"{regPath}\command"))
+        using (var key = Registry.CurrentUser.CreateSubKey($@"{regPath}\command"))
         {
             key.SetValue(null, menuCommand);
         }
@@ -57,7 +57,7 @@ static class FileShellExtension
         Debug.Assert(!string.IsNullOrEmpty(fileType) && !string.IsNullOrEmpty(shellKeyName));
 
         // full path to the registry location
-        string regPath = $@"Software\Classes\{fileType}\shell\{shellKeyName}";
+        var regPath = $@"Software\Classes\{fileType}\shell\{shellKeyName}";
 
         // remove context menu from the registry
         Registry.CurrentUser.DeleteSubKeyTree(regPath, false);

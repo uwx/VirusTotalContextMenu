@@ -55,14 +55,14 @@ public static class Program
             if (FileShellExtension.IsRegistered(FileType, KeyName))
             {
                 if (DialogResult.Yes == MessageBox.Show("VirusTotal Context Menu is currently registered.\nUnregister it?", "VirusTotal Context Menu Registration", MessageBoxButtons.YesNo, MessageBoxIcon.Question))
-                    args = new[] { "--unregister" };
+                    args = ["--unregister"];
                 else
                     return true;
             }
             else
             {
                 if (DialogResult.Yes == MessageBox.Show("VirusTotal Context Menu is currently not registered.\nRegister it?", "VirusTotal Context Menu Registration", MessageBoxButtons.YesNo, MessageBoxIcon.Question))
-                    args = new[] { "--register" };
+                    args = ["--register"];
                 else 
                     return true;
             }
@@ -74,14 +74,14 @@ public static class Program
         {
 
             // full path to self, %L is placeholder for selected file
-            string? path = Environment.ProcessPath;
+            var path = Environment.ProcessPath;
             if (null == path)
             {
                 WriteError("Could not get the path to the executable.");
                 return false;
             }
-            string menuCommand = $"\"{path}\" \"%L\"";
-            string iconPath = path; // Use the same path as the executable for the icon
+            var menuCommand = $"\"{path}\" \"%L\"";
+            var iconPath = path; // Use the same path as the executable for the icon
 
             // register the context menu
             FileShellExtension.Register(FileType, KeyName, MenuText, menuCommand, iconPath);
@@ -111,7 +111,7 @@ public static class Program
             return;
         }
         url = url.Replace("&", "^&");
-        using Process? p = Process.Start(new ProcessStartInfo("cmd", $"/c start {url}") { CreateNoWindow = true });
+        using var p = Process.Start(new ProcessStartInfo("cmd", $"/c start {url}") { CreateNoWindow = true });
     }
 
     private static void WriteError(string error)
@@ -126,12 +126,12 @@ public static class Program
 
     private static async Task VirusScanFile(string filePath)
     {
-        string path = Path.Combine(Path.GetDirectoryName(Environment.ProcessPath)!, "appsettings.json");
+        var path = Path.Combine(Path.GetDirectoryName(Environment.ProcessPath)!, "appsettings.json");
 
         //Console.WriteLine(path);
 
-        JObject jObj = JObject.Parse(await File.ReadAllTextAsync(path));
-        string? key = jObj.GetValue("apikey")?.ToString();
+        var jObj = JObject.Parse(await File.ReadAllTextAsync(path));
+        var key = jObj.GetValue("apikey")?.ToString();
 
         if (string.IsNullOrWhiteSpace(key) || key.Length != 64)
         {
@@ -141,34 +141,34 @@ public static class Program
 
         Console.WriteLine("Scanning file: " + filePath + "...");
 
-        using VirusTotal virusTotal = new VirusTotal(key);
+        using var virusTotal = new VirusTotal(key);
         virusTotal.UseTLS = true;
 
-        FileInfo info = new FileInfo(filePath);
+        var info = new FileInfo(filePath);
 
         if (!info.Exists)
             return;
 
         //Check if the file has been scanned before.
-        string fileName = Path.GetFileName(filePath);
+        var fileName = Path.GetFileName(filePath);
 
-        FileReport report = await virusTotal.GetFileReportAsync(info);
+        var report = await virusTotal.GetFileReportAsync(info);
 
-        if (report == null || report.ResponseCode != FileReportResponseCode.Present)
+        if (report is not { ResponseCode: FileReportResponseCode.Present })
         {
             Console.Write($"No report for {fileName} - sending file to VT...");
 
             try
             {
-                ScanResult result = await virusTotal.ScanFileAsync(info);
+                var result = await virusTotal.ScanFileAsync(info);
 
                 if (result.Permalink.Length < 66)
                 {
                     WriteError("Invalid scan ID received from VirusTotal: " + result.Permalink);
                     return;
                 }
-                string sha256 = result.Permalink.Substring(2, 64);
-                OpenUrl("https://www.virustotal.com/gui/file/" + sha256 + "/detection/" + result.Permalink, "File new to VirusTotal. Open in browser?");
+                var sha256 = result.Permalink.Substring(2, 64);
+                OpenUrl($"https://www.virustotal.com/gui/file/{sha256}/detection/{result.Permalink}", "File new to VirusTotal. Open in browser?");
             }
             catch (RateLimitException)
             {
